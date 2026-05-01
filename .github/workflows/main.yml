@@ -18,11 +18,18 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Remove problematic Gradle properties
+        run: |
+          if [ -f gradle.properties ]; then
+            sed -i '/org.gradle.internal.agent/d' gradle.properties
+            sed -i '/-javaagent:/d' gradle.properties
+          fi
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --no-build-cache
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
