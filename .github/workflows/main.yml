@@ -39,9 +39,10 @@ jobs:
           kotlin.code.style=official
           EOF
 
-      # Fix corrupted resource files (colors.xml, strings.xml, themes.xml)
+      # Fix all XML resource files (values and xml folders)
       - name: Fix XML resource files
         run: |
+          # values folder
           mkdir -p app/src/main/res/values
           cat > app/src/main/res/values/colors.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
@@ -66,6 +67,37 @@ jobs:
           <resources>
               <style name="Theme.BulkSmsSender" parent="android:Theme.Material.Light.NoActionBar" />
           </resources>
+          EOF
+
+          # xml folder – create clean versions of all needed files
+          mkdir -p app/src/main/res/xml
+          cat > app/src/main/res/xml/file_paths.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <paths>
+              <external-files-path name="external_files" path="." />
+              <files-path name="files" path="." />
+              <cache-path name="cache" path="." />
+          </paths>
+          EOF
+          cat > app/src/main/res/xml/backup_rules.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <full-backup-content>
+              <include domain="file" path="."/>
+              <exclude domain="file" path="cache/"/>
+          </full-backup-content>
+          EOF
+          cat > app/src/main/res/xml/data_extraction_rules.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <data-extraction-rules>
+              <cloud-backup>
+                  <include domain="file" path="."/>
+                  <exclude domain="file" path="cache/"/>
+              </cloud-backup>
+              <device-transfer>
+                  <include domain="file" path="."/>
+                  <exclude domain="file" path="cache/"/>
+              </device-transfer>
+          </data-extraction-rules>
           EOF
 
       # Manually download and install Gradle 8.7
