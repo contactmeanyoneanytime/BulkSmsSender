@@ -18,21 +18,26 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Remove any existing wrapper files to avoid conflicts
-      - name: Clean wrapper files
+      # Delete all wrapper files and any corrupted properties
+      - name: Remove Gradle wrapper
         run: |
           rm -f gradlew gradlew.bat
           rm -rf gradle/wrapper
+          rm -rf .gradle
+          if [ -f gradle.properties ]; then
+            sed -i '/-javaagent/d' gradle.properties
+            sed -i '/org.gradle.internal.agent/d' gradle.properties
+          fi
 
-      # Manually download and install Gradle 8.7
+      # Manually download and install Gradle 8.7 (no wrapper, no checksum verification)
       - name: Install Gradle 8.7
         run: |
           wget https://services.gradle.org/distributions/gradle-8.7-bin.zip
           unzip -q gradle-8.7-bin.zip
           echo "$PWD/gradle-8.7/bin" >> $GITHUB_PATH
 
-      # Override project-level build.gradle.kts with known‑good versions (optional but safe)
-      - name: Fix plugin versions (if needed)
+      # Override project‑level build.gradle.kts with known compatible versions (safe)
+      - name: Ensure correct plugin versions
         run: |
           cat > build.gradle.kts << 'EOF'
           plugins {
@@ -42,7 +47,8 @@ jobs:
           }
           EOF
 
-      - name: Build Debug APK
+      # Build the debug APK using the manually installed Gradle (not the wrapper)
+      - name: Build APK
         run: gradle assembleDebug --no-daemon
 
       - name: Upload APK
