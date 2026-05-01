@@ -18,7 +18,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Remove problematic Gradle properties
+      - name: Remove instrumentation agent from gradle.properties (if present)
         run: |
           if [ -f gradle.properties ]; then
             sed -i '/org.gradle.internal.agent/d' gradle.properties
