@@ -18,24 +18,25 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Remove any local Gradle wrapper and properties
+      - name: Download and install Gradle 8.5
         run: |
-          rm -f gradle/wrapper/gradle-wrapper.jar
-          rm -f gradlew
-          rm -f gradlew.bat
-          # Remove agent line from gradle.properties if it exists
-          if [ -f gradle.properties ]; then
-            sed -i '/-javaagent/d' gradle.properties
-            sed -i '/org.gradle.internal.agent/d' gradle.properties
-          fi
+          wget https://services.gradle.org/distributions/gradle-8.5-bin.zip
+          unzip -q gradle-8.5-bin.zip
+          echo "$PWD/gradle-8.5/bin" >> $GITHUB_PATH
 
-      - name: Generate a clean Gradle wrapper (v8.5)
+      - name: Clean any existing wrapper files
+        run: |
+          rm -rf .gradle
+          rm -f gradlew gradlew.bat
+          rm -f gradle/wrapper/gradle-wrapper.jar
+
+      - name: Generate fresh Gradle wrapper (using Gradle 8.5)
         run: |
           gradle wrapper --gradle-version=8.5 --distribution-type=bin
           chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --no-build-cache
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
