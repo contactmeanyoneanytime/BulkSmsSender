@@ -18,15 +18,21 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Remove instrumentation agent from gradle.properties (if present)
+      - name: Remove any local Gradle wrapper and properties
         run: |
+          rm -f gradle/wrapper/gradle-wrapper.jar
+          rm -f gradlew
+          rm -f gradlew.bat
+          # Remove agent line from gradle.properties if it exists
           if [ -f gradle.properties ]; then
+            sed -i '/-javaagent/d' gradle.properties
             sed -i '/org.gradle.internal.agent/d' gradle.properties
-            sed -i '/-javaagent:/d' gradle.properties
           fi
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Generate a clean Gradle wrapper (v8.5)
+        run: |
+          gradle wrapper --gradle-version=8.5 --distribution-type=bin
+          chmod +x gradlew
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --no-build-cache
