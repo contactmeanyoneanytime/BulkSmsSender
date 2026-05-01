@@ -29,6 +29,16 @@ jobs:
             sed -i '/org.gradle.internal.agent/d' gradle.properties
           fi
 
+      # Create proper gradle.properties with AndroidX enabled
+      - name: Setup gradle.properties
+        run: |
+          cat > gradle.properties << 'EOF'
+          org.gradle.jvmargs=-Xmx2048m
+          android.useAndroidX=true
+          android.enableJetifier=true
+          kotlin.code.style=official
+          EOF
+
       # Manually download and install Gradle 8.7 (no wrapper, no checksum verification)
       - name: Install Gradle 8.7
         run: |
