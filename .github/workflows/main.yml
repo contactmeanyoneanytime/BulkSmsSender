@@ -18,8 +18,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Delete all wrapper files and any corrupted properties
-      - name: Remove Gradle wrapper
+      - name: Remove Gradle wrapper and corrupted properties
         run: |
           rm -f gradlew gradlew.bat
           rm -rf gradle/wrapper
@@ -29,7 +28,6 @@ jobs:
             sed -i '/org.gradle.internal.agent/d' gradle.properties
           fi
 
-      # Create proper gradle.properties with AndroidX enabled
       - name: Setup gradle.properties
         run: |
           cat > gradle.properties << 'EOF'
@@ -39,10 +37,8 @@ jobs:
           kotlin.code.style=official
           EOF
 
-      # Fix all XML resource files (values, xml, and manifest)
-      - name: Fix XML files
+      - name: Fix XML files (values, xml, manifest)
         run: |
-          # values folder
           mkdir -p app/src/main/res/values
           cat > app/src/main/res/values/colors.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
@@ -69,7 +65,6 @@ jobs:
           </resources>
           EOF
 
-          # xml folder
           mkdir -p app/src/main/res/xml
           cat > app/src/main/res/xml/file_paths.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
@@ -100,19 +95,16 @@ jobs:
           </data-extraction-rules>
           EOF
 
-          # AndroidManifest.xml (minimal, with required permissions and MainActivity)
           cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
               package="com.bulksms.sender">
-
               <uses-permission android:name="android.permission.SEND_SMS" />
               <uses-permission android:name="android.permission.READ_PHONE_STATE" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
-
               <application
                   android:allowBackup="true"
                   android:icon="@mipmap/ic_launcher"
@@ -133,15 +125,13 @@ jobs:
           </manifest>
           EOF
 
-      # Manually download and install Gradle 8.7
       - name: Install Gradle 8.7
         run: |
           wget https://services.gradle.org/distributions/gradle-8.7-bin.zip
           unzip -q gradle-8.7-bin.zip
           echo "$PWD/gradle-8.7/bin" >> $GITHUB_PATH
 
-      # Override project‑level build.gradle.kts with known compatible versions
-      - name: Ensure correct plugin versions
+      - name: Override project build.gradle.kts
         run: |
           cat > build.gradle.kts << 'EOF'
           plugins {
@@ -151,7 +141,70 @@ jobs:
           }
           EOF
 
-      # Build the debug APK
+      - name: Override app/build.gradle.kts with minSdk 26 and all dependencies
+        run: |
+          cat > app/build.gradle.kts << 'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+              id("com.google.devtools.ksp")
+          }
+          android {
+              namespace = "com.bulksms.sender"
+              compileSdk = 34
+              defaultConfig {
+                  applicationId = "com.bulksms.sender"
+                  minSdk = 26
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0"
+                  testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+              }
+              buildTypes {
+                  release {
+                      isMinifyEnabled = true
+                      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+              buildFeatures {
+                  compose = true
+              }
+              composeOptions {
+                  kotlinCompilerExtensionVersion = "1.5.4"
+              }
+          }
+          dependencies {
+              implementation("androidx.core:core-ktx:1.12.0")
+              implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+              implementation("androidx.activity:activity-compose:1.8.0")
+              implementation("androidx.compose.ui:ui:1.5.4")
+              implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
+              implementation("androidx.compose.material3:material3:1.1.2")
+              implementation("androidx.compose.material:material-icons-extended:1.5.4")
+              implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+              implementation("androidx.work:work-runtime-ktx:2.9.0")
+              implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+              implementation("com.opencsv:opencsv:5.8")
+              implementation("org.apache.poi:poi:5.2.3")
+              implementation("org.apache.poi:poi-ooxml:5.2.3")
+              implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+              implementation("androidx.room:room-runtime:2.6.0")
+              implementation("androidx.room:room-ktx:2.6.0")
+              ksp("androidx.room:room-compiler:2.6.0")
+              implementation("androidx.datastore:datastore-preferences:1.0.0")
+              testImplementation("junit:junit:4.13.2")
+              androidTestImplementation("androidx.test.ext:junit:1.1.5")
+              androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+          }
+          EOF
+
       - name: Build APK
         run: gradle assembleDebug --no-daemon
 
