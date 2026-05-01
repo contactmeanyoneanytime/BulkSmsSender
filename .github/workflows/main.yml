@@ -18,31 +18,32 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Remove any stale wrapper or properties that could cause agent errors
-      - name: Clean previous Gradle state
+      # Remove any existing wrapper files to avoid conflicts
+      - name: Clean wrapper files
         run: |
-          rm -rf .gradle
-          rm -f gradle/wrapper/gradle-wrapper.jar
           rm -f gradlew gradlew.bat
-          # Remove any -javaagent line from gradle.properties
-          if [ -f gradle.properties ]; then
-            sed -i '/-javaagent/d' gradle.properties
-            sed -i '/org.gradle.internal.agent/d' gradle.properties
-          fi
+          rm -rf gradle/wrapper
 
-      # Use Gradle 8.7 (matches AGP 8.5.0 requirement)
-      - name: Setup Gradle 8.7
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: 8.7
+      # Manually download and install Gradle 8.7
+      - name: Install Gradle 8.7
+        run: |
+          wget https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q gradle-8.7-bin.zip
+          echo "$PWD/gradle-8.7/bin" >> $GITHUB_PATH
 
-      # Generate a fresh wrapper pointing to 8.7 (optional, but ensures consistency)
-      - name: Generate Gradle wrapper
-        run: gradle wrapper --gradle-version=8.7 --distribution-type=bin
+      # Override project-level build.gradle.kts with known‑good versions (optional but safe)
+      - name: Fix plugin versions (if needed)
+        run: |
+          cat > build.gradle.kts << 'EOF'
+          plugins {
+              id("com.android.application") version "8.5.0" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.20" apply false
+              id("com.google.devtools.ksp") version "1.9.20-1.0.14" apply false
+          }
+          EOF
 
-      # Build the debug APK
-      - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
